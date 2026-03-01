@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ozge Qadam</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════
+  TOKENS — LIGHT & DARK
+═══════════════════════════════════════ */
+:root {
+  --peach:#f4a26b; --lav:#b89fd4; --mint:#7ecfc0; --sky:#8bc4e8;
+  --bg:linear-gradient(135deg,#fde8d8 0%,#e8d8f4 35%,#c8e4f4 65%,#d4f0e8 100%);
+  --surface:rgba(255,255,255,0.55);
+  --surface-strong:rgba(255,255,255,0.80);
+  --border:rgba(255,255,255,0.75);
+  --shadow:0 8px 32px rgba(120,80,180,0.12);
+  --text:#3a2d52; --muted:#7a6d92;
+  --input-bg:rgba(255,255,255,0.7);
+  --blob-op:0.35;
+  --radius:24px;
+  --chat-bot:rgba(255,255,255,0.92);
+  --chat-user-from:#f4a26b; --chat-user-to:#b89fd4;
+  --header-bg:rgba(255,255,255,0.55);
+  --progress-track:rgba(180,130,200,0.15);
+}
+[data-theme="dark"] {
+  --bg:linear-gradient(135deg,#1a0f2e 0%,#0d1b2a 40%,#0a1f1a 100%);
+  --surface:rgba(30,20,50,0.65);
+  --surface-strong:rgba(40,28,65,0.90);
+  --border:rgba(255,255,255,0.08);
+  --shadow:0 8px 32px rgba(0,0,0,0.4);
+  --text:#e8e0f8; --muted:#9b8fb0;
+  --input-bg:rgba(30,20,50,0.7);
+  --blob-op:0.15;
+  --chat-bot:rgba(35,25,55,0.95);
+  --header-bg:rgba(15,10,30,0.80);
+  --progress-track:rgba(180,130,200,0.08);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);overflow-x:hidden;transition:background 0.4s,color 0.3s;}
+
+.bg-blobs{position:fixed;inset:0;z-index:-1;overflow:hidden;}
+.blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:var(--blob-op);animation:blobFloat 12s ease-in-out infinite;}
+.blob-1{width:600px;height:600px;background:#f4a26b;top:-200px;left:-100px;}
+.blob-2{width:500px;height:500px;background:#c4a8e8;top:100px;right:-100px;animation-delay:-4s;}
+.blob-3{width:400px;height:400px;background:#7ecfc0;bottom:-100px;left:30%;animation-delay:-8s;}
+.blob-4{width:300px;height:300px;background:#8bc4e8;bottom:200px;right:100px;animation-delay:-6s;}
+@keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-30px) scale(1.05)}66%{transform:translate(-20px,20px) scale(.95)}}
+
+.glass{background:var(--surface);backdrop-filter:blur(20px);border:1.5px solid var(--border);box-shadow:var(--shadow);}
+
+header{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--header-bg);backdrop-filter:blur(20px);border-bottom:1.5px solid var(--border);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;transition:background 0.4s;}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Caveat',cursive;font-size:25px;color:var(--text);font-weight:700;cursor:pointer;text-decoration:none;}
+.logo-dot{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--peach),var(--lav));display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:800;box-shadow:0 4px 12px rgba(180,130,210,0.4);}
+nav{display:flex;align-items:center;gap:3px;background:var(--surface);border:1.5px solid var(--border);border-radius:99px;padding:5px;backdrop-filter:blur(10px);}
+nav button{padding:7px 16px;border-radius:99px;border:none;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .25s;background:transparent;color:var(--muted);}
+nav button:hover,nav button.active{background:var(--surface-strong);color:var(--text);box-shadow:0 2px 10px rgba(0,0,0,0.08);}
+.header-right{display:flex;align-items:center;gap:8px;}
+.btn-login{background:linear-gradient(135deg,var(--peach),var(--lav));color:#fff;border:none;padding:9px 22px;border-radius:99px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 15px rgba(180,130,200,0.4);transition:all .25s;}
+.btn-login:hover{transform:translateY(-2px);}
+.icon-btn{width:36px;height:36px;border-radius:50%;background:var(--surface);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:all .2s;}
+.icon-btn:hover{background:var(--surface-strong);transform:scale(1.05);}
+
+.mode-bar{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:99;display:flex;background:var(--surface);border:1.5px solid var(--border);border-radius:99px;padding:5px;backdrop-filter:blur(15px);box-shadow:var(--shadow);}
+.mode-btn{padding:7px 26px;border-radius:99px;border:none;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .3s;background:transparent;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+.mode-btn.active{background:linear-gradient(135deg,var(--peach),var(--lav));color:#fff;box-shadow:0 3px 12px rgba(180,130,200,0.4);}
+
+main{max-width:1400px;margin:0 auto;padding:132px 20px 40px;display:grid;grid-template-columns:330px 1fr 355px;gap:18px;align-items:start;}
+
+.chat-panel{border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;height:calc(100vh - 155px);max-height:780px;position:sticky;top:122px;}
+.chat-header{padding:16px 18px;background:linear-gradient(135deg,rgba(244,162,107,.25),rgba(184,159,212,.25));border-bottom:1.5px solid var(--border);}
+.chat-head-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.chat-avatar{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--peach),var(--lav));display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.chat-header h2{font-family:'Caveat',cursive;font-size:22px;font-weight:700;color:var(--text);}
+.model-badge{font-size:10px;font-weight:700;background:linear-gradient(135deg,rgba(244,162,107,.2),rgba(184,159,212,.2));border:1px solid rgba(184,159,212,.4);color:var(--lav);padding:2px 8px;border-radius:99px;}
+.chat-online{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
+.dot-green{width:7px;height:7px;border-radius:50%;background:#4caf89;box-shadow:0 0 6px #4caf89;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.lang-bar{display:flex;gap:4px;padding:8px 16px;background:var(--surface);}
+.lang-btn{padding:3px 9px;border-radius:99px;border:1px solid rgba(0,0,0,.1);font-size:10px;font-weight:700;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s;font-family:'Nunito',sans-serif;}
+[data-theme="dark"] .lang-btn{border-color:rgba(255,255,255,.1);}
+.lang-btn.active{background:var(--surface-strong);color:var(--text);border-color:rgba(180,130,200,.4);}
+#chat-window{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--surface);}
+#chat-window::-webkit-scrollbar{width:3px;}
+#chat-window::-webkit-scrollbar-thumb{background:rgba(180,130,200,.3);border-radius:99px;}
+.bubble-bot{display:flex;gap:8px;align-items:flex-start;animation:fadeUp .3s ease;}
+.bot-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--peach),var(--lav));display:flex;align-items:center;justify-content:center;font-size:14px;}
+.bubble-bot-text{background:var(--chat-bot);border-radius:5px 16px 16px 16px;padding:10px 14px;font-size:13px;line-height:1.6;color:var(--text);max-width:88%;box-shadow:0 3px 10px rgba(0,0,0,.06);}
+.bubble-user{display:flex;justify-content:flex-end;animation:fadeUp .3s ease;}
+.bubble-user-text{background:linear-gradient(135deg,var(--chat-user-from),var(--chat-user-to));color:#fff;border-radius:16px 5px 16px 16px;padding:10px 14px;font-size:13px;max-width:88%;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.typing-indicator{display:flex;gap:4px;padding:10px 14px;background:var(--chat-bot);border-radius:5px 16px 16px 16px;width:fit-content;}
+.typing-dot{width:6px;height:6px;border-radius:50%;background:var(--lav);animation:typingBounce 1.2s infinite;}
+.typing-dot:nth-child(2){animation-delay:.2s;}.typing-dot:nth-child(3){animation-delay:.4s;}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+.chat-input-wrap{padding:12px;background:var(--surface-strong);border-top:1.5px solid var(--border);display:flex;gap:7px;align-items:center;}
+.chat-input-wrap input{flex:1;border:1.5px solid rgba(180,130,200,.25);border-radius:99px;padding:9px 14px;font-family:'Nunito',sans-serif;font-size:12px;background:var(--input-bg);color:var(--text);outline:none;transition:border-color .2s;}
+.chat-input-wrap input:focus{border-color:var(--lav);}
+.btn-send{background:linear-gradient(135deg,var(--peach),var(--lav));color:#fff;border:none;padding:9px 16px;border-radius:99px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;}
+.btn-send:hover{transform:translateY(-1px);}
+.btn-mic{width:34px;height:34px;border-radius:50%;border:1.5px solid rgba(180,130,200,.3);background:var(--input-bg);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .2s;color:var(--muted);}
+.btn-mic.mic-active{color:#e55;border-color:#e55;animation:pulse 1s infinite;}
+
+.center-col{display:flex;flex-direction:column;gap:18px;}
+.hero{border-radius:var(--radius);overflow:hidden;position:relative;min-height:300px;background:linear-gradient(135deg,rgba(244,162,107,.25),rgba(184,159,212,.25));border:1.5px solid var(--border);backdrop-filter:blur(20px);padding:36px;display:flex;flex-direction:column;justify-content:flex-end;}
+.hero-img{position:absolute;right:0;top:0;height:100%;width:50%;object-fit:cover;border-radius:0 var(--radius) var(--radius) 0;opacity:.85;}
+.hero-overlay{position:absolute;right:0;top:0;height:100%;width:55%;background:linear-gradient(to right,var(--surface-strong) 0%,transparent 60%);}
+.hero h1{font-family:'Caveat',cursive;font-size:48px;line-height:1.1;color:var(--text);position:relative;z-index:2;margin-bottom:8px;}
+.hero p{font-size:13px;color:var(--muted);max-width:320px;line-height:1.6;position:relative;z-index:2;margin-bottom:18px;}
+.hero-btns{display:flex;gap:10px;position:relative;z-index:2;}
+.btn-hero{background:var(--surface-strong);color:var(--text);border:1.5px solid var(--border);padding:11px 22px;border-radius:99px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,.08);transition:all .25s;}
+.btn-hero:hover{transform:translateY(-2px);}
+.btn-hero-sec{background:rgba(255,255,255,.35);color:var(--text);border:1.5px solid var(--border);padding:11px 22px;border-radius:99px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;backdrop-filter:blur(10px);transition:all .25s;}
+
+.map-section{border-radius:var(--radius);overflow:hidden;border:1.5px solid var(--border);box-shadow:var(--shadow);position:relative;}
+.map-filters{position:absolute;top:12px;left:12px;right:55px;z-index:400;display:flex;gap:7px;overflow-x:auto;}
+.map-filters::-webkit-scrollbar{display:none;}
+.mfb{white-space:nowrap;background:rgba(255,255,255,.92);border:1.5px solid rgba(255,255,255,.95);backdrop-filter:blur(10px);color:#3a2d52;padding:7px 14px;border-radius:99px;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.07);transition:all .2s;display:flex;align-items:center;gap:4px;}
+.mfb:hover,.mfb.active{background:linear-gradient(135deg,var(--peach),var(--lav));color:#fff;border-color:transparent;}
+#map{height:340px;width:100%;display:block;}
+.map-locate-btn{position:absolute;bottom:12px;right:12px;z-index:400;width:42px;height:42px;border-radius:50%;background:var(--surface-strong);border:1.5px solid var(--border);box-shadow:0 4px 15px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;transition:all .2s;}
+.employer-pill{display:none;position:absolute;bottom:12px;left:12px;z-index:400;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border:1.5px solid rgba(255,255,255,.95);border-radius:16px;padding:10px 16px;box-shadow:0 4px 15px rgba(0,0,0,.08);align-items:center;gap:10px;}
+.employer-pill.show{display:flex;}
+
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.stat-card{border-radius:20px;padding:18px;background:var(--surface);border:1.5px solid var(--border);backdrop-filter:blur(15px);}
+.stat-card h4{font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;}
+.pb{height:7px;border-radius:99px;background:var(--progress-track);overflow:hidden;margin:6px 0;}
+.pf{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--peach),var(--lav));}
+.profile-card{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.btn-update{margin-top:8px;background:var(--surface-strong);border:1.5px solid var(--border);color:var(--text);padding:8px 20px;border-radius:99px;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;cursor:pointer;}
+.btn-update:hover{background:linear-gradient(135deg,var(--peach),var(--lav));color:#fff;border-color:transparent;}
+
+.jobs-panel{background:var(--surface);border:1.5px solid var(--border);backdrop-filter:blur(20px);border-radius:var(--radius);padding:22px;}
+.tab-bar{display:flex;background:var(--surface);border:1.5px solid var(--border);border-radius:99px;padding:4px;gap:3px;}
+.tab-btn{flex:1;padding:7px 14px;border-radius:99px;border:none;font-family:'Nunito',sans-serif;font-size:10px;font-weight:700;cursor:pointer;transition:all .25s;background:transparent;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.tab-btn.active{background:linear-gradient(135deg,var(--peach),var(--lav));color:#fff;box-shadow:0 3px 10px rgba(180,130,200,.4);}
+#jobs-container{display:flex;flex-direction:column;gap:9px;max-height:460px;overflow-y:auto;padding-right:3px;}
+#jobs-container::-webkit-scrollbar{width:3px;}
+#jobs-container::-webkit-scrollbar-thumb{background:rgba(180,130,200,.3);border-radius:99px;}
+.vrow{background:var(--surface-strong);border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .25s;cursor:pointer;}
+.vrow:hover{transform:translateX(4px);box-shadow:0 4px 15px rgba(120,80,180,.1);}
+.vemoji{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,rgba(244,162,107,.2),rgba(184,159,212,.2));display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.vinfo{flex:1;min-width:0;}
+.vtitle{font-size:12px;font-weight:700;color:var(--text);}
+.vco{font-size:10px;color:var(--muted);margin-top:1px;}
+.vright{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+.vsal{font-size:11px;font-weight:700;color:#4caf89;}
+.hot{font-size:9px;font-weight:700;color:#e55;background:rgba(229,85,85,.1);padding:1px 7px;border-radius:99px;border:1px solid rgba(229,85,85,.2);}
+.vact{display:flex;gap:5px;}
+.vbtn{padding:5px 9px;border-radius:99px;border:none;font-size:11px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:700;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;}
+.vbtn-call{background:rgba(37,99,235,.1);color:#2563eb;border:1px solid rgba(37,99,235,.2);}
+.vbtn-wa{background:rgba(22,163,74,.1);color:#16a34a;border:1px solid rgba(22,163,74,.2);}
+.tag{display:inline-block;font-size:9px;font-weight:700;background:rgba(180,130,200,.12);color:var(--muted);padding:2px 6px;border-radius:99px;border:1px solid rgba(180,130,200,.2);margin-right:2px;}
+
+.quick-actions{border-radius:20px;padding:14px 18px;background:var(--surface);border:1.5px solid var(--border);backdrop-filter:blur(15px);display:flex;gap:6px;align-items:center;justify-content:space-around;}
+.qa-btn{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:9px 12px;border-radius:14px;border:none;background:transparent;font-family:'Nunito',sans-serif;transition:all .2s;}
+.qa-btn:hover{background:var(--surface-strong);transform:translateY(-2px);}
+.qa-icon{width:40px;height:40px;border-radius:11px;background:var(--surface-strong);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.qa-label{font-size:10px;font-weight:700;color:var(--text);}
+
+.right-col{display:flex;flex-direction:column;gap:14px;}
+.rpanel{border-radius:var(--radius);padding:18px;background:var(--surface);border:1.5px solid var(--border);backdrop-filter:blur(20px);box-shadow:var(--shadow);}
+.sec-title{font-family:'Caveat',cursive;font-size:21px;color:var(--text);margin-bottom:3px;}
+.sec-sub{font-size:11px;color:var(--muted);margin-bottom:12px;}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.ccard{border-radius:14px;overflow:hidden;border:1.5px solid var(--border);background:var(--surface-strong);cursor:pointer;}
+.ccard img{width:100%;height:72px;object-fit:cover;}
+.ccard-body{padding:9px;}
+.ccard-title{font-size:11px;font-weight:700;color:var(--text);margin-bottom:5px;}
+.btn-expl{width:100%;background:var(--surface);border:1.5px solid var(--border);color:var(--text);padding:6px;border-radius:99px;font-family:'Nunito',sans-serif;font-size:10px;font-weight:700;}
+.tests{display:flex;flex-direction:column;gap:9px;}
+.tcard{border-radius:14px;padding:12px;background:var(--surface-strong);border:1.5px solid var(--border);display:flex;gap:9px;align-items:flex-start;}
+.tav{width:36px;height:36px;border-radius:50%;flex-shrink:0;object-fit:cover;border:2px solid var(--border);}
+.ttext{font-size:11px;color:var(--muted);line-height:1.5;}
+.tname{font-size:10px;font-weight:700;color:var(--text);margin-top:4px;}
+.sgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;}
+.scard{border-radius:16px;padding:16px;background:var(--surface-strong);border:1.5px solid var(--border);cursor:pointer;display:flex;flex-direction:column;gap:6px;text-decoration:none;}
+.si{font-size:28px;}
+.st{font-size:12px;font-weight:700;color:var(--text);}
+.sd{font-size:10px;color:var(--muted);}
+.mentor-banner{border-radius:var(--radius);padding:20px;background:linear-gradient(135deg,rgba(244,162,107,.2),rgba(184,159,212,.3));border:1.5px solid var(--border);backdrop-filter:blur(20px);cursor:pointer;}
+.mavs{display:flex;margin-bottom:10px;}
+.mavs img{width:36px;height:36px;border-radius:50%;border:2.5px solid var(--surface-strong);margin-right:-7px;object-fit:cover;}
+
+dialog{background:transparent;border:none;padding:0;max-width:640px;width:100%;margin:auto;}
+dialog::backdrop{background:rgba(30,10,60,.3);backdrop-filter:blur(10px);}
+.modal-inner{background:var(--surface-strong);backdrop-filter:blur(30px);border:1.5px solid var(--border);border-radius:28px;padding:32px;box-shadow:0 20px 60px rgba(120,80,180,.2);position:relative;max-height:88vh;overflow-y:auto;}
+.modal-inner::-webkit-scrollbar{width:3px;}
+.modal-inner::-webkit-scrollbar-thumb{background:rgba(180,130,200,.3);border-radius:99px;}
+.mcl{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.06);border:none;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;color:var(--muted);}
+.mtitle{font-family:'Caveat',cursive;font-size:30px;color:var(--text);margin-bottom:18px;}
+.flabel{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px;display:block;}
+.finput{width:100%;border:1.5px solid rgba(180,130,200,.3);border-radius:11px;padding:11px 14px;font-family:'Nunito',sans-serif;font-size:13px;background:var(--input-bg);color:var(--text);outline:none;}
+.finput:focus{border-color:var(--lav);}
+.btn-save{width:100%;background:linear-gradient(135deg,var(--peach),var(--lav));color:#fff;border:none;padding:13px;border-radius:99px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 15px rgba(180,130,200,.4);margin-top:6px;}
+.atabs{display:flex;margin-bottom:20px;border-bottom:2px solid rgba(180,130,200,.15);}
+.atab{padding:9px 22px;background:transparent;border:none;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;}
+.atab.active{color:var(--text);border-bottom-color:var(--lav);}
+
+.egov-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.egov-btn{background:var(--surface-strong);border:1.5px solid var(--border);border-radius:14px;padding:16px;text-align:center;cursor:pointer;}
+.egov-btn.active-tab{background:linear-gradient(135deg,rgba(244,162,107,.2),rgba(184,159,212,.2));border-color:rgba(184,159,212,.5);}
+.egov-icon{font-size:28px;margin-bottom:6px;}
+.egov-title{font-size:12px;font-weight:700;color:var(--text);}
+.egov-panel{display:none;background:var(--surface-strong);border:1.5px solid var(--border);border-radius:16px;padding:16px;margin-top:4px;}
+.egov-panel.active{display:block;}
+.step-list{list-style:none;display:flex;flex-direction:column;gap:8px;margin:10px 0;}
+.step-item{display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--muted);line-height:1.5;}
+.step-num{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--peach),var(--lav));color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+.docs-list{list-style:none;display:flex;flex-direction:column;gap:5px;margin:8px 0;}
+.docs-list li{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);}
+.egov-link{display:block;text-align:center;padding:10px;background:linear-gradient(135deg,var(--peach),var(--lav));color:#fff;border-radius:99px;font-weight:700;font-size:12px;text-decoration:none;margin-top:12px;}
+
+.housing-filters{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;}
+.hfbtn{padding:6px 14px;border-radius:99px;border:1.5px solid var(--border);background:var(--surface-strong);color:var(--muted);font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;cursor:pointer;}
+.hfbtn.active{background:linear-gradient(135deg,var(--peach),var(--lav));color:#fff;border-color:transparent;}
+.housing-list{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;padding-right:3px;}
+.housing-list::-webkit-scrollbar{width:3px;}
+.housing-list::-webkit-scrollbar-thumb{background:rgba(180,130,200,.3);border-radius:99px;}
+.hcard{background:var(--surface-strong);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;cursor:pointer;}
+.hcard-img{width:100%;height:110px;object-fit:cover;}
+.hcard-body{padding:12px;}
+.hcard-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.hcard-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;}
+.hcard-price{font-size:14px;font-weight:800;color:#4caf89;}
+.hcard-tags{display:flex;gap:5px;flex-wrap:wrap;}
+.hcard-actions{display:flex;gap:7px;margin-top:9px;}
+.hbtn{flex:1;padding:8px;border-radius:99px;border:none;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;}
+.hbtn-map{background:rgba(184,159,212,.15);color:var(--lav);border:1px solid rgba(184,159,212,.3);}
+.hbtn-wa{background:rgba(22,163,74,.1);color:#16a34a;border:1px solid rgba(22,163,74,.2);}
+
+.skeleton{background:linear-gradient(90deg,rgba(180,130,200,.1) 25%,rgba(180,130,200,.2) 50%,rgba(180,130,200,.1) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:12px;}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+.toast{position:fixed;bottom:22px;right:22px;z-index:9999;background:var(--surface-strong);backdrop-filter:blur(20px);border:1.5px solid var(--border);border-radius:14px;padding:12px 18px;font-size:12px;font-weight:600;color:var(--text);box-shadow:var(--shadow);animation:slideIn .3s ease;max-width:280px;}
+@keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+.avatar-pin{width:44px;height:44px;border-radius:50%;background:#fff;padding:2px;box-shadow:0 4px 15px rgba(120,80,180,.3);position:relative;}
+.avatar-pin::after{content:'';position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #fff;}
+.avatar-pin img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid var(--lav);}
+
+.leaflet-popup-content-wrapper{background:var(--surface-strong) !important;backdrop-filter:blur(20px);border-radius:14px !important;border:1.5px solid var(--border) !important;box-shadow:0 10px 30px rgba(120,80,180,.15) !important;color:var(--text) !important;}
+.leaflet-popup-tip{background:var(--surface-strong) !important;}
+.leaflet-popup-content{color:var(--text) !important;}
+
+/* Mentor cards */
+.mentor-card{background:var(--surface-strong);border:1.5px solid var(--border);border-radius:16px;padding:16px;display:flex;gap:12px;align-items:flex-start;}
+.mentor-av{width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--lav);flex-shrink:0;}
+.mentor-name{font-size:13px;font-weight:700;color:var(--text);}
+.mentor-role{font-size:11px;color:var(--muted);margin:2px 0 8px;}
+.mentor-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;}
+.mentor-btn{padding:7px 16px;border-radius:99px;border:none;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,var(--peach),var(--lav));color:#fff;}
+
+/* Site language switcher */
+.site-lang-wrap{position:relative;}
+.site-lang-btn{display:flex;align-items:center;gap:4px;padding:7px 12px;border-radius:99px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;}
+.site-lang-btn:hover{background:var(--surface-strong);}
+.site-lang-menu{display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--surface-strong);backdrop-filter:blur(20px);border:1.5px solid var(--border);border-radius:14px;padding:6px;box-shadow:var(--shadow);z-index:200;min-width:150px;flex-direction:column;gap:2px;}
+.site-lang-menu.open{display:flex;}
+.site-lang-menu button{padding:8px 14px;border:none;background:transparent;color:var(--text);font-family:'Nunito',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border-radius:9px;text-align:left;transition:background .15s;}
+.site-lang-menu button:hover{background:var(--surface);}
+.site-lang-menu button.active-lang{background:linear-gradient(135deg,rgba(244,162,107,.2),rgba(184,159,212,.2));font-weight:800;}
+
+@media(max-width:1100px){main{grid-template-columns:1fr;}.chat-panel{height:420px;position:relative;top:0;}.hero-img,.hero-overlay{display:none;}}
+</style>
+</head>
+<body>
+
+<div class="bg-blobs">
+  <div class="blob blob-1"></div><div class="blob blob-2"></div>
+  <div class="blob blob-3"></div><div class="blob blob-4"></div>
+</div>
+
+<header>
+  <a class="logo" href="#"><div class="logo-dot">OQ</div>Ozge Qadam</a>
+  <nav>
+    <button class="active" data-i18n="nav_jobs" onclick="document.getElementById('career').scrollIntoView({behavior:'smooth'})">Работа</button>
+    <button data-i18n="nav_egov" onclick="openModal('egov')">E-gov</button>
+    <button data-i18n="nav_housing" onclick="openModal('housing')">Жильё</button>
+    <button data-i18n="nav_mentors" onclick="openModal('mentors')">Менторы</button>
+  </nav>
+  <div class="header-right">
+    <!-- Переключатель языка сайта -->
+    <div class="site-lang-wrap" id="site-lang-wrap">
+      <button class="site-lang-btn" onclick="toggleSiteLangMenu()">
+        <span id="site-lang-icon">🌐</span>
+        <span id="site-lang-label">RU</span>
+        <span style="font-size:9px;margin-left:2px">▾</span>
+      </button>
+      <div class="site-lang-menu" id="site-lang-menu">
+        <button onclick="setSiteLang('ru')">🇷🇺 Русский</button>
+        <button onclick="setSiteLang('kz')">🇰🇿 Қазақша</button>
+        <button onclick="setSiteLang('en')">🇬🇧 English</button>
+        <button onclick="setSiteLang('uz')">🇺🇿 O'zbek</button>
+      </div>
+    </div>
+    <div class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Сменить тему">🌙</div>
+    <div class="icon-btn" id="user-icon-btn" onclick="openAuthModal()">👤</div>
+    <button class="btn-login" onclick="openAuthModal()" id="auth-btn" data-i18n="btn_login">Войти</button>
+  </div>
+</header>
+
+<div class="mode-bar">
+  <button class="mode-btn active" id="mode-seeker" data-i18n="mode_seeker" onclick="setMode('seeker')">Соискатель</button>
+  <button class="mode-btn" id="mode-employer" data-i18n="mode_employer" onclick="setMode('employer')">Работодатель</button>
+</div>
+
+<main>
+<div class="glass chat-panel" id="chat-panel-wrap">
+  <div class="chat-header">
+    <div class="chat-head-row">
+      <div class="chat-avatar">🤖</div>
+      <div><h2>Career Coach</h2><span class="model-badge">⚡ Groq · Llama 3.3</span></div>
+    </div>
+    <div class="chat-online"><div class="dot-green"></div><span id="chat-status">Онлайн · Соискатель</span></div>
+  </div>
+  <div class="lang-bar">
+    <button class="lang-btn active" id="lang-ru" onclick="setLang('ru')">RU</button>
+    <button class="lang-btn" id="lang-kz" onclick="setLang('kz')">KZ</button>
+    <button class="lang-btn" id="lang-en" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" id="lang-uz" onclick="setLang('uz')">UZ</button>
+  </div>
+  <div id="chat-window">
+    <div class="bubble-bot"><div class="bot-av">🤖</div><div class="bubble-bot-text" id="chat-greeting"><strong>Сәлем! 👋</strong><br>Мен Groq AI карьера коучымын. Жұмыс іздеу, E-gov, жалға пәтер — бәрін білемін!<br><br><em>Сұрақ қойыңыз 👇</em></div></div>
+  </div>
+  <div class="chat-input-wrap">
+    <button class="btn-mic" id="mic-btn" onclick="startVoice()">🎙</button>
+    <input type="text" id="user-input" data-i18n-ph="chat_placeholder" placeholder="Напишите вопрос...">
+    <button class="btn-send" id="send-btn" onclick="handleSend()">↗</button>
+  </div>
+</div>
+
+<div class="center-col">
+  <div class="hero">
+    <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1200" class="hero-img" alt="team">
+    <div class="hero-overlay"></div>
+    <h1 data-i18n-html="hero_title">Твой Город.<br>Твои Правила.</h1>
+    <p data-i18n="hero_sub">Найди работу и жильё в Казахстане с поддержкой AI.</p>
+    <div class="hero-btns">
+      <button class="btn-hero" data-i18n="btn_find_job" onclick="document.getElementById('career').scrollIntoView({behavior:'smooth'})">Найти работу</button>
+      <button class="btn-hero-sec" data-i18n="btn_housing" onclick="openModal('housing')">🏠 Жильё</button>
+    </div>
+  </div>
+
+  <div class="map-section">
+    <div class="map-filters" id="map-filters">
+      <button class="mfb active" data-i18n="map_jobs" onclick="filterMap('jobs',this)">💼 Работа</button>
+      <button class="mfb" id="traffic-btn" data-i18n="map_traffic" onclick="toggleTraffic(this)">🚦 Пробки</button>
+      <button class="mfb" id="btn-comp" data-i18n="map_comp" onclick="toggleCompetition(this)">🔥 Конкуренция</button>
+      <button class="mfb" data-i18n="map_services" onclick="filterMap('services',this)">🏛 ЦОНы</button>
+      <button class="mfb" data-i18n="map_leisure" onclick="filterMap('leisure',this)">🌳 Отдых</button>
+      <button class="mfb" data-i18n="map_housing" onclick="filterMap('housing',this)">🏠 Жильё</button>
+      <button class="mfb" id="btn-seekers" data-i18n="map_seekers" onclick="showSeekers(this)" style="display:none">👥 Кандидаты</button>
+    </div>
+    <div class="employer-pill" id="employer-filters">
+      <span style="font-size:26px">👥</span>
+      <div>
+        <div style="font-size:9px;color:#7a6d92;text-transform:uppercase;font-weight:700">Кандидаты</div>
+        <div id="seeker-count" style="font-size:18px;font-weight:800;color:#4caf89">— активных</div>
+      </div>
+    </div>
+    <div id="map"></div>
+    <button class="map-locate-btn" onclick="manualLocate()">📍</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <h4 data-i18n="stat_title">📊 Рынок Труда</h4>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px">
+        <span data-i18n="stat_vacancies">Вакансий в базе</span><span id="jobs-count" style="font-size:20px;font-weight:800;color:var(--text);font-family:'Caveat',cursive">—</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:3px;display:flex;justify-content:space-between">
+        <span data-i18n="stat_competition">Конкуренция</span><span style="color:#e55;font-weight:700" data-i18n="stat_high">Высокая</span>
+      </div>
+      <div class="pb"><div class="pf" style="width:75%"></div></div>
+      <p style="font-size:9px;color:var(--muted)" data-i18n="stat_pct">75% рынка занято в районе</p>
+    </div>
+    <div class="stat-card profile-card">
+      <div style="font-size:36px;margin-bottom:7px">🚀</div>
+      <div style="font-size:14px;font-weight:800;color:var(--text)" data-i18n="profile_title">Твой Профиль</div>
+      <p id="profile-status-text" style="font-size:10px;color:var(--muted);margin-top:3px" data-i18n="profile_sub">Резюме видят работодатели</p>
+      <button class="btn-update" data-i18n="btn_update" onclick="editProfile()">Обновить</button>
+    </div>
+  </div>
+
+  <div class="jobs-panel" id="career">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div class="sec-title" style="font-size:24px" data-i18n="jobs_title">Смарт Работа <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#4caf89;margin-left:5px;animation:pulse 2s infinite;vertical-align:middle"></span></div>
+        <div class="sec-sub" data-i18n="jobs_sub">HH.kz + Эксклюзивы</div>
+      </div>
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tab-vacancies" data-i18n="tab_vacancies" onclick="switchJobTab('vacancies')">Вакансии</button>
+        <button class="tab-btn" id="tab-intern" data-i18n="tab_intern" onclick="switchJobTab('internships')">Стажировки</button>
+      </div>
+    </div>
+    <div id="jobs-container"></div>
+  </div>
+
+  <div class="quick-actions" id="services-section">
+    <button class="qa-btn" onclick="filterMap('jobs')"><div class="qa-icon">💼</div><span class="qa-label">Работа</span></button>
+    <button class="qa-btn" onclick="toggleTraffic()"><div class="qa-icon">🚗</div><span class="qa-label">Пробки</span></button>
+    <button class="qa-btn" onclick="openModal('housing')"><div class="qa-icon">🏠</div><span class="qa-label">Жильё</span></button>
+  </div>
+</div>
+
+<div class="right-col">
+  <div class="rpanel">
+    <div class="sec-title" data-i18n="community_title">Community</div>
+    <div class="sec-sub" data-i18n="community_sub">Отзывы пользователей</div>
+    <div class="tests" id="testimonials-container"></div>
+  </div>
+  <div class="rpanel">
+    <div class="sec-title" data-i18n="services_title">Сервисы</div>
+    <div class="sgrid">
+      <div class="scard" onclick="openModal('risks')"><div class="si">🛡️</div><div class="st" data-i18n="svc_risks">Риски</div><div class="sd" data-i18n="svc_risks_sub">Безопасность</div></div>
+      <a href="https://wa.me/87755088820" target="_blank" class="scard"><div class="si">✈️</div><div class="st">Telegram</div><div class="sd" data-i18n="svc_tg_sub">Вакансии</div></a>
+      <div class="scard" onclick="openModal('egov')"><div class="si">🇰🇿</div><div class="st">E-gov</div><div class="sd">ИИН, ЭЦП</div></div>
+    </div>
+  </div>
+  <div class="mentor-banner" onclick="openModal('mentors')">
+    <div class="mavs">
+      <img src="https://randomuser.me/api/portraits/men/75.jpg" alt="">
+      <img src="https://randomuser.me/api/portraits/women/56.jpg" alt="">
+      <img src="https://randomuser.me/api/portraits/men/44.jpg" alt="">
+    </div>
+    <div class="sec-title" style="font-size:22px" data-i18n="mentor_title">Менторство</div>
+    <p style="font-size:12px;color:var(--muted);margin-top:5px" data-i18n="mentor_sub">Найди наставника — не совершай чужих ошибок.</p>
+    <span style="font-size:10px;font-weight:700;color:var(--lav);letter-spacing:.05em;text-transform:uppercase;margin-top:7px;display:block" data-i18n="mentor_online">🟢 Онлайн сейчас</span>
+  </div>
+</div>
+</main>
+
+<!-- FAB кнопка для работодателя -->
+<button id="fab-add" onclick="openAddModal()" style="display:none;position:fixed;bottom:30px;right:30px;z-index:900;background:linear-gradient(135deg,var(--peach),var(--lav));color:#fff;border:none;width:60px;height:60px;border-radius:50%;font-size:32px;box-shadow:0 8px 25px rgba(180,130,200,0.5);cursor:pointer;transition:transform 0.2s;">+</button>
+
+<!-- Модальное окно добавления -->
+<dialog id="add-modal">
+  <div class="modal-inner">
+    <button class="mcl" onclick="document.getElementById('add-modal').close()">✕</button>
+    <h2 class="mtitle" id="add-title">Добавить</h2>
+    <div class="atabs">
+      <button class="atab active" id="tab-add-job" onclick="switchAddTab('job')">💼 Вакансию</button>
+      <button class="atab" id="tab-add-house" onclick="switchAddTab('house')">🏠 Жильё</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:13px">
+      <div><label class="flabel">Название</label><input type="text" id="add-title-input" class="finput" placeholder="Например: SMM Менеджер / 1-комн. квартира"></div>
+      <div id="add-company-block"><label class="flabel">Компания</label><input type="text" id="add-company" class="finput" placeholder="Название вашей компании"></div>
+      <div><label class="flabel">Город</label><select id="add-city" class="finput"><option>Алматы</option><option>Талдыкорган</option></select></div>
+      <div><label class="flabel" id="add-price-label">Зарплата (₸)</label><input type="text" id="add-price" class="finput" placeholder="Например: 250 000"></div>
+      <div><label class="flabel">Телефон / WhatsApp</label><input type="text" id="add-phone" class="finput" placeholder="87755088820"></div>
+      <button class="btn-save" onclick="submitAddForm()">Опубликовать</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Главное модальное окно -->
+<dialog id="main-modal">
+  <div class="modal-inner">
+    <button class="mcl" onclick="document.getElementById('main-modal').close()">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</dialog>
+
+<!-- Профиль -->
+<dialog id="profile-modal">
+  <div class="modal-inner">
+    <button class="mcl" onclick="document.getElementById('profile-modal').close()">✕</button>
+    <h2 class="mtitle">🚀 Твой Профиль</h2>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div><label class="flabel">Имя</label><input type="text" id="prof-name" class="finput" placeholder="Ваше имя"></div>
+      <div><label class="flabel">Должность / Ищу работу</label><input type="text" id="prof-role" class="finput" value="Повар"></div>
+      <div><label class="flabel">Желаемая зарплата</label><input type="text" id="prof-salary" class="finput" value="200 000 ₸"></div>
+      <div><label class="flabel">Город</label>
+        <select id="prof-city" class="finput"><option>Алматы</option><option>Талдыкорган</option></select>
+      </div>
+      <button class="btn-save" onclick="saveProfile()">Сохранить</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Авторизация -->
+<dialog id="auth-modal">
+  <div class="modal-inner">
+    <button class="mcl" onclick="document.getElementById('auth-modal').close()">✕</button>
+    <div class="atabs">
+      <button class="atab active" id="btn-login" onclick="toggleAuth('login')">Вход</button>
+      <button class="atab" id="btn-register" onclick="toggleAuth('register')">Регистрация</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:13px">
+      <div><label class="flabel">Email</label><input type="email" id="auth-email" class="finput" placeholder="you@example.com"></div>
+      <div><label class="flabel">Пароль</label><input type="password" id="auth-password" class="finput" placeholder="••••••••"></div>
+      <div id="register-fields" style="display:none;flex-direction:column;gap:13px">
+        <div><label class="flabel">Имя</label><input type="text" id="auth-name" class="finput" placeholder="Ваше имя"></div>
+        <div><label class="flabel">Город</label><select id="auth-city" class="finput"><option>Алматы</option><option>Талдыкорган</option></select></div>
+      </div>
+      <button class="btn-save" onclick="handleAuth()"><span id="auth-submit-text">Войти в аккаунт</span></button>
+      <p id="auth-error" style="color:#e55;font-size:11px;text-align:center;display:none"></p>
+    </div>
+  </div>
+</dialog>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* =========================================================
+   КОНФИГ
+========================================================= */
+const SB_URL   = 'https://zcolhhnmuxcpzokdyzmr.supabase.co';
+const SB_KEY   = 'sb_publishable_RBu9JDMidNLy3YCsg51r_A_xC0JMzqg';
+const GROQ_KEY = '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';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+
+const SYSTEM_PROMPT = `Ты — AI карьера коуч платформы "Ozge Qadam" для мигрантов и соискателей Казахстана.
+Отвечай СТРОГО на том языке, на котором написано сообщение пользователя:
+- Русский → отвечай по-русски
+- Казахский → отвечай на казахском
+- English → reply in English
+- O'zbek → javob o'zbek tilida
+
+Ты помогаешь: 1) найти работу в Алматы и Талдыкоргане 2) разобраться с E-gov (ИИН, ЭЦП, прописка) 3) найти жильё 4) понять права работника 5) строить маршруты до работы и жилья.
+
+Если пользователь спрашивает маршрут — скажи "Нажмите 📍 на маркере карты или напишите 'маршрут до [место]'" и уточни что показываешь на карте.
+Будь дружелюбным, кратким и поддерживающим. Используй эмодзи умеренно.`;
+
+/* =========================================================
+   СОСТОЯНИЕ
+========================================================= */
+let currentLang     = 'ru';
+let currentMode     = 'seeker';
+let currentUser     = null;
+let userProfile     = { role: 'Повар', salary: '200 000 ₸', name: '', city: 'Алматы' };
+let chatHistory     = [];
+let userMarker      = null;
+let currentUserPos  = null;
+let isTrafficOn     = false;
+let isCompetitionOn = false;
+let currentAddType  = 'job';
+window.currentMapItems = [];
+
+/* =========================================================
+   ТЕМА
+========================================================= */
+function toggleTheme() {
+  const html  = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('theme-btn').textContent = isDark ? '🌙' : '☀️';
+  if (isDark) { map.removeLayer(darkTile);  lightTile.addTo(map); }
+  else        { map.removeLayer(lightTile); darkTile.addTo(map);  }
+  localStorage.setItem('ozge-theme', isDark ? 'light' : 'dark');
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('ozge-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  document.getElementById('theme-btn').textContent = saved === 'dark' ? '☀️' : '🌙';
+}
+
+/* =========================================================
+   TOAST
+========================================================= */
+function showToast(msg, duration = 3000) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), duration);
+}
+
+/* =========================================================
+   SUPABASE HELPERS
+========================================================= */
+async function sbFetch(path, opts = {}) {
+  const res  = await fetch(SB_URL + path, {
+    ...opts,
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || 'return=representation',
+      ...(opts.headers || {})
+    }
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(text);
+  return text ? JSON.parse(text) : null;
+}
+const sbGet   = (t, q = '')       => sbFetch(`/rest/v1/${t}?${q}`);
+const sbPost  = (t, d, prefer)    => sbFetch(`/rest/v1/${t}`, { method: 'POST', prefer, body: JSON.stringify(d) });
+const sbPatch = (t, d, match)     => sbFetch(`/rest/v1/${t}?${match}`, { method: 'PATCH', body: JSON.stringify(d) });
+
+async function sbSignIn(email, pw) {
+  const r = await fetch(SB_URL + '/auth/v1/token?grant_type=password', {
+    method: 'POST',
+    headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password: pw })
+  });
+  return r.json();
+}
+
+async function sbSignUp(email, pw, meta = {}) {
+  const r = await fetch(SB_URL + '/auth/v1/signup', {
+    method: 'POST',
+    headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password: pw, data: meta })
+  });
+  return r.json();
+}
+
+/* =========================================================
+   КАРТА
+========================================================= */
+const map = L.map('map', { zoomControl: false }).setView([43.238, 76.910], 13);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+const lightTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',  { attribution: '© OSM' });
+const darkTile  = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',   { attribution: '© OSM' });
+(localStorage.getItem('ozge-theme') === 'dark' ? darkTile : lightTile).addTo(map);
+
+const markersL = L.layerGroup().addTo(map);
+const routeL   = L.layerGroup().addTo(map);
+const trafficL = L.layerGroup();
+
+const staticLocations = {
+  services: [
+    { lat: 43.2389, lng: 76.8897, title: 'ЦОН Бостандык',    desc: 'Алматы' },
+    { lat: 45.0135, lng: 78.3725, title: 'ЦОН Талдыкорган',  desc: 'ул. Тауелсыздык' }
+  ],
+  leisure: [
+    { lat: 43.2560, lng: 76.9280, title: 'Парк 28 Панфиловцев', desc: 'Алматы' },
+    { lat: 45.0050, lng: 78.3800, title: 'Парк Жастар',          desc: 'Талдыкорган' }
+  ]
+};
+
+async function filterMap(type, btn) {
+  if (btn) {
+    document.querySelectorAll('.mfb').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  markersL.clearLayers();
+  routeL.clearLayers();
+
+  const cols   = { jobs: '#b89fd4', leisure: '#7ecfc0', services: '#8bc4e8', housing: '#f4a26b' };
+  const emojis = { jobs: '💼', leisure: '🌳', services: '🏛', housing: '🏠' };
+  const col    = cols[type]   || '#b89fd4';
+  const emoji  = emojis[type] || '📍';
+
+  let items = [];
+  if (type === 'jobs') {
+    const jobs = await loadJobs('vacancy');
+    items = jobs.map(j => {
+      let lat = j.lat, lng = j.lng;
+      if (!lat || !lng) {
+        const isTaldyk = j.city && j.city.includes('Талдыкорган');
+        lat = (isTaldyk ? 45.015 : 43.238) + (Math.random() - .5) * .05;
+        lng = (isTaldyk ? 78.370 : 76.910) + (Math.random() - .5) * .05;
+      }
+      return { lat, lng, title: j.title, desc: j.company, isLink: j.url, phone: j.phone };
+    });
+  } else if (type === 'housing') {
+    const housing = await loadHousingData('all');
+    items = housing.map(h => ({ lat: h.lat, lng: h.lng, title: h.title, desc: h.price_text, phone: h.phone }));
+  } else {
+    items = staticLocations[type] || [];
+  }
+
+  window.currentMapItems = items;
+
+  items.forEach(item => {
+    const icon  = L.divIcon({ className: '', html: `<div style="width:42px;height:42px;border-radius:50%;background:${col};border:3px solid white;box-shadow:0 4px 15px ${col}88;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;">${emoji}</div>` });
+    const actBtn = item.isLink
+      ? `<a href="${item.isLink}" target="_blank" style="flex:1;background:#f4a26b;border-radius:99px;padding:7px;font-size:11px;font-weight:700;color:white;text-align:center;text-decoration:none;display:block">HH.kz</a>`
+      : `<a href="https://wa.me/${item.phone || '87755088820'}" target="_blank" style="flex:1;background:#16a34a;border-radius:99px;padding:7px;font-size:11px;font-weight:700;color:white;text-align:center;text-decoration:none;display:block">WhatsApp</a>`;
+    const popup = `<div style="font-family:Nunito,sans-serif;min-width:170px;color:#3a2d52"><div style="font-weight:800;font-size:13px;margin-bottom:3px">${item.title}</div><div style="font-size:11px;color:#7a6d92;margin-bottom:10px">${item.desc}</div><div style="display:flex;gap:7px"><button onclick="askRoute('${item.title.replace(/'/g,"\\'")}',${item.lat},${item.lng})" style="flex:1;background:#b89fd4;border-radius:99px;padding:7px;font-size:11px;font-weight:700;color:white;border:none;cursor:pointer">📍 Маршрут</button>${actBtn}</div></div>`;
+    L.marker([item.lat, item.lng], { icon }).bindPopup(popup).addTo(markersL);
+  });
+
+  if (items.length > 0) {
+    try {
+      const g = userMarker
+        ? new L.featureGroup([...markersL.getLayers(), userMarker])
+        : new L.featureGroup(markersL.getLayers());
+      map.fitBounds(g.getBounds().pad(0.3));
+    } catch(e) {}
+  }
+}
+
+/* ----- Геолокация ----- */
+function locateMe() {
+  return new Promise((res, rej) => {
+    if (!navigator.geolocation) return rej(new Error('no geolocation'));
+    navigator.geolocation.getCurrentPosition(pos => {
+      currentUserPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      if (userMarker) map.removeLayer(userMarker);
+      const icon = L.divIcon({ className: '', html: `<div style="width:50px;height:50px;border-radius:50%;border:3px solid #b89fd4;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;font-size:24px;">😎</div>` });
+      userMarker = L.marker([currentUserPos.lat, currentUserPos.lng], { icon }).addTo(map);
+      res(currentUserPos);
+    }, rej, { enableHighAccuracy: true });
+  });
+}
+
+function manualLocate() {
+  locateMe()
+    .then(p => { map.flyTo([p.lat, p.lng], 15); showToast(t('toast_located')); })
+    .catch(() => showToast(t('toast_locate_err')));
+}
+
+/* ----- Маршрут — пешком + авто, выбираем кратчайший ----- */
+async function buildRoute(dLat, dLng, dName) {
+  if (!currentUserPos) {
+    addMsg('bot', t('route_finding'));
+    try { await locateMe(); }
+    catch { return addMsg('bot', t('route_no_pos')); }
+  }
+  addMsg('bot', t('route_finding'));
+  try {
+    const origin = `${currentUserPos.lng},${currentUserPos.lat}`;
+    const dest   = `${dLng},${dLat}`;
+
+    // Запрашиваем оба маршрута параллельно
+    const [footRes, carRes] = await Promise.all([
+      fetch(`https://router.project-osrm.org/route/v1/foot/${origin};${dest}?overview=full&geometries=geojson`).then(r => r.json()),
+      fetch(`https://router.project-osrm.org/route/v1/driving/${origin};${dest}?overview=full&geometries=geojson`).then(r => r.json())
+    ]);
+
+    routeL.clearLayers();
+
+    const footRoute = footRes.routes && footRes.routes[0];
+    const carRoute  = carRes.routes  && carRes.routes[0];
+
+    // Рисуем оба маршрута разными цветами
+    if (footRoute) {
+      const coords = footRoute.geometry.coordinates.map(c => [c[1], c[0]]);
+      L.polyline(coords, { color: '#b89fd4', weight: 5, opacity: .85, dashArray: '8,4' })
+       .bindTooltip(`🚶 ${Math.round(footRoute.duration/60)} ${t('route_walk')}`, {permanent:false})
+       .addTo(routeL);
+    }
+    if (carRoute) {
+      const coords = carRoute.geometry.coordinates.map(c => [c[1], c[0]]);
+      L.polyline(coords, { color: '#f4a26b', weight: 5, opacity: .85 })
+       .bindTooltip(`🚗 ${Math.round(carRoute.duration/60)} ${t('route_car')}`, {permanent:false})
+       .addTo(routeL);
+    }
+
+    // Подгоняем карту под маршрут
+    const bestCoords = (carRoute || footRoute).geometry.coordinates.map(c => [c[1], c[0]]);
+    map.fitBounds(L.polyline(bestCoords).getBounds().pad(.25));
+
+    // Красивое сообщение с обоими вариантами
+    const footMin = footRoute ? `🚶 <strong>${Math.round(footRoute.duration/60)}</strong> ${t('route_walk')}` : '';
+    const carMin  = carRoute  ? `🚗 <strong>${Math.round(carRoute.duration/60)}</strong> ${t('route_car')}` : '';
+    const dist    = carRoute  ? `📏 ${(carRoute.distance/1000).toFixed(1)} км` : '';
+
+    // Убираем предыдущее сообщение "строю маршрут"
+    const lastBotBubbles = document.querySelectorAll('.bubble-bot .bubble-bot-text');
+    if (lastBotBubbles.length) lastBotBubbles[lastBotBubbles.length-1].remove();
+    const lastBotWrap = document.querySelectorAll('.bubble-bot');
+    if (lastBotWrap.length) lastBotWrap[lastBotWrap.length-1].remove();
+
+    addMsg('bot', `${t('route_result')} <strong>${dName}</strong><br>${[footMin, carMin, dist].filter(Boolean).join(' &nbsp;·&nbsp; ')}<br><small style="color:var(--muted)">🟣 пунктир — пешком &nbsp; 🟠 линия — авто</small>`);
+
+  } catch(e) {
+    addMsg('bot', t('route_err'));
+    console.error(e);
+  }
+}
+
+/* Вызывается из попапа карты */
+function askRoute(title, lat, lng) {
+  buildRoute(lat, lng, title);
+  map.closePopup();
+}
+
+/* ----- Пробки (симуляция) ----- */
+function toggleTraffic(btn) {
+  isTrafficOn = !isTrafficOn;
+  if (btn) btn.classList.toggle('active', isTrafficOn);
+  if (isTrafficOn) {
+    trafficL.addTo(map);
+    showToast('🚦 Пробки включены (симуляция)');
+    // Добавляем несколько случайных красных отрезков
+    trafficL.clearLayers();
+    const segments = [
+      [[43.250, 76.900], [43.245, 76.920]],
+      [[43.235, 76.930], [43.230, 76.950]],
+      [[43.260, 76.910], [43.255, 76.925]]
+    ];
+    segments.forEach(seg => L.polyline(seg, { color: '#e55', weight: 6, opacity: .7 }).addTo(trafficL));
+  } else {
+    trafficL.clearLayers();
+    map.removeLayer(trafficL);
+    showToast('🚦 Пробки выключены');
+  }
+}
+
+/* ----- Конкуренция ----- */
+function toggleCompetition(btn) {
+  isCompetitionOn = !isCompetitionOn;
+  if (btn) btn.classList.toggle('active', isCompetitionOn);
+  showToast(isCompetitionOn ? '🔥 Тепловая карта конкуренции включена' : '🔥 Тепловая карта выключена');
+}
+
+/* =========================================================
+   AI CHAT
+========================================================= */
+function esc(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtGroq(t) { return t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>'); }
+
+function addMsg(role, html) {
+  const w = document.getElementById('chat-window');
+  const d = document.createElement('div');
+  if (role === 'user') {
+    d.className = 'bubble-user';
+    d.innerHTML = `<div class="bubble-user-text">${esc(html)}</div>`;
+  } else {
+    d.className = 'bubble-bot';
+    d.innerHTML = `<div class="bot-av">🤖</div><div class="bubble-bot-text">${html}</div>`;
+  }
+  w.appendChild(d);
+  w.scrollTop = w.scrollHeight;
+}
+
+function showTyping() {
+  const w = document.getElementById('chat-window');
+  const d = document.createElement('div');
+  d.className = 'bubble-bot'; d.id = 'typing-bubble';
+  d.innerHTML = `<div class="bot-av">🤖</div><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  w.appendChild(d);
+  w.scrollTop = w.scrollHeight;
+}
+function hideTyping() { const e = document.getElementById('typing-bubble'); if (e) e.remove(); }
+
+async function askGroq(msg) {
+  chatHistory.push({ role: 'user', content: msg });
+  const msgs = chatHistory.slice(-12);
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + GROQ_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: GROQ_MODEL, messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...msgs], max_tokens: 450, temperature: 0.7 })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data  = await res.json();
+    const reply = data.choices[0].message.content;
+    chatHistory.push({ role: 'assistant', content: reply });
+    if (currentUser) sbPost('chat_messages', { user_id: currentUser.id, user_message: msg, bot_response: reply, lang: currentLang }).catch(() => {});
+    return reply;
+  } catch(e) {
+    chatHistory.pop();
+    return 'Ошибка соединения с AI. Попробуйте позже.';
+  }
+}
+
+async function handleSend() {
+  const inp  = document.getElementById('user-input');
+  const btn  = document.getElementById('send-btn');
+  const text = inp.value.trim();
+  if (!text) return;
+
+  addMsg('user', text);
+  inp.value = '';
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  const lo = text.toLowerCase();
+
+  // ── Определение местоположения (RU/KZ/EN/UZ) ──
+  const isLocQuery = lo.includes('где я') || lo.includes('мен қайдамын') ||
+    lo.includes('where am i') || lo.includes('men qayerdaman') || lo.includes('менің орным');
+  if (isLocQuery) {
+    addMsg('bot', '🔍 ...');
+    try {
+      const pos = await locateMe();
+      map.setView([pos.lat, pos.lng], 16);
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}&accept-language=${siteLang}`).then(x => x.json());
+      addMsg('bot', `📍 ${(r.address && (r.address.road || r.address.suburb || r.address.city)) || '...'}`);
+    } catch { addMsg('bot', t('toast_locate_err')); }
+    btn.disabled = false; btn.textContent = '↗'; return;
+  }
+
+  // ── Умный роутинг — ключевые слова на 4 языках ──
+  const routeKeywords = [
+    // RU
+    'маршрут до', 'как добраться до', 'как доехать до', 'путь до', 'проложи маршрут',
+    // KZ
+    'маршрут', 'қалай жетуге', 'жол', 'бағыт',
+    // EN
+    'route to', 'how to get to', 'directions to', 'navigate to', 'way to',
+    // UZ
+    'marshrut', 'qanday borish', "yo'l ko'rsat", 'yo\'l'
+  ];
+
+  const isRouteQuery = routeKeywords.some(kw => lo.includes(kw));
+  if (isRouteQuery) {
+    // Ищем совпадение с маркерами на карте
+    const found = window.currentMapItems && window.currentMapItems.find(p =>
+      lo.includes(p.title.toLowerCase()) || (p.desc && lo.includes(p.desc.toLowerCase()))
+    );
+    if (found) {
+      await buildRoute(found.lat, found.lng, found.title);
+      btn.disabled = false; btn.textContent = '↗'; return;
+    }
+    // Нет точного совпадения — строим маршрут до ближайшей работы
+    const nearestJob = window.currentMapItems && window.currentMapItems[0];
+    if (nearestJob) {
+      await buildRoute(nearestJob.lat, nearestJob.lng, nearestJob.title);
+      btn.disabled = false; btn.textContent = '↗'; return;
+    }
+    addMsg('bot', { ru:'Откройте вкладку "💼 Работа" или "🏠 Жильё" на карте, затем нажмите 📍 на маркере.', kz:'Картада "💼 Жұмыс" немесе "🏠 Үй" ашып, маркерге 📍 басыңыз.', en:'Open "💼 Jobs" or "🏠 Housing" on the map, then tap 📍 on any marker.', uz:'"💼 Ish" yoki "🏠 Uy" ni oching, keyin xaritadagi 📍 belgisiga bosing.' }[siteLang] || '...');
+    btn.disabled = false; btn.textContent = '↗'; return;
+  }
+
+  // ── Фильтры карты ──
+  if (lo.includes('вакансии') || lo.includes('работа') || lo.includes('жұмыс') || lo.includes('ish') || lo.includes('job')) filterMap('jobs');
+  if (lo.includes('цон') || lo.includes('прописка') || lo.includes('иин') || lo.includes('xhm') || lo.includes('хқо')) filterMap('services');
+  if (lo.includes('жилье') || lo.includes('квартир') || lo.includes('үй') || lo.includes('uy-joy') || lo.includes('housing')) filterMap('housing');
+  if (lo.includes('egov') || lo.includes('е-гов') || lo.includes('электрон үкімет')) openModal('egov');
+
+  showTyping();
+  const reply = await askGroq(text);
+  hideTyping();
+  addMsg('bot', fmtGroq(reply));
+  btn.disabled = false;
+  btn.textContent = '↗';
+}
+
+/* Голос */
+function startVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { showToast('🎙 Голосовой ввод не поддерживается'); return; }
+  const rec = new SpeechRecognition();
+  rec.lang = currentLang === 'kz' ? 'kk-KZ' : currentLang === 'en' ? 'en-US' : 'ru-RU';
+  const micBtn = document.getElementById('mic-btn');
+  micBtn.classList.add('mic-active');
+  rec.start();
+  rec.onresult = e => {
+    document.getElementById('user-input').value = e.results[0][0].transcript;
+    micBtn.classList.remove('mic-active');
+    handleSend();
+  };
+  rec.onerror = () => { micBtn.classList.remove('mic-active'); showToast('❌ Ошибка микрофона'); };
+  rec.onend   = () => micBtn.classList.remove('mic-active');
+}
+
+/* =========================================================
+   МОДАЛЬНЫЕ ОКНА
+========================================================= */
+function openModal(type) {
+  const mc = document.getElementById('modal-content');
+  const templates = {
+    egov: `
+      <h2 class="mtitle">🇰🇿 E-gov Казахстан</h2>
+      <div class="egov-grid">
+        <div class="egov-btn active-tab" onclick="showEgovPanel('iin',this)"><div class="egov-icon">🪪</div><div class="egov-title">ИИН</div></div>
+        <div class="egov-btn" onclick="showEgovPanel('ecps',this)"><div class="egov-icon">🔐</div><div class="egov-title">ЭЦП</div></div>
+        <div class="egov-btn" onclick="showEgovPanel('reg',this)"><div class="egov-icon">🏠</div><div class="egov-title">Прописка</div></div>
+        <div class="egov-btn" onclick="showEgovPanel('work',this)"><div class="egov-icon">💼</div><div class="egov-title">Разрешение</div></div>
+      </div>
+      <div id="egov-panel-iin" class="egov-panel active">
+        <strong style="font-size:13px;color:var(--text)">Как получить ИИН</strong>
+        <ul class="step-list">
+          <li class="step-item"><div class="step-num">1</div>Обратитесь в ближайший ЦОН с паспортом</li>
+          <li class="step-item"><div class="step-num">2</div>Заполните заявление на месте</li>
+          <li class="step-item"><div class="step-num">3</div>Получите ИИН в течение 1 рабочего дня</li>
+        </ul>
+        <a href="https://egov.kz" target="_blank" class="egov-link">🔗 Открыть egov.kz</a>
+      </div>
+      <div id="egov-panel-ecps" class="egov-panel">
+        <strong style="font-size:13px;color:var(--text)">Как получить ЭЦП</strong>
+        <ul class="step-list">
+          <li class="step-item"><div class="step-num">1</div>Нужен ИИН и удостоверение личности</li>
+          <li class="step-item"><div class="step-num">2</div>Посетите ЦОН или оформите онлайн на pki.gov.kz</li>
+          <li class="step-item"><div class="step-num">3</div>Установите NCA Layer и скачайте сертификат</li>
+        </ul>
+        <a href="https://pki.gov.kz" target="_blank" class="egov-link">🔗 Открыть pki.gov.kz</a>
+      </div>
+      <div id="egov-panel-reg" class="egov-panel">
+        <strong style="font-size:13px;color:var(--text)">Временная регистрация</strong>
+        <ul class="docs-list">
+          <li>📄 Паспорт + нотариальная копия</li>
+          <li>📄 Договор аренды жилья</li>
+          <li>📄 Заявление от владельца</li>
+        </ul>
+        <a href="https://egov.kz/cms/ru/articles/migration" target="_blank" class="egov-link">🔗 Подробнее на egov.kz</a>
+      </div>
+      <div id="egov-panel-work" class="egov-panel">
+        <strong style="font-size:13px;color:var(--text)">Разрешение на работу</strong>
+        <ul class="step-list">
+          <li class="step-item"><div class="step-num">1</div>Работодатель подаёт заявку в Министерство труда</li>
+          <li class="step-item"><div class="step-num">2</div>Срок рассмотрения — до 15 рабочих дней</li>
+          <li class="step-item"><div class="step-num">3</div>Без разрешения — штраф работодателю</li>
+        </ul>
+        <a href="https://www.gov.kz/memleket/entities/enbek" target="_blank" class="egov-link">🔗 Министерство труда</a>
+      </div>`,
+
+    housing: `
+      <h2 class="mtitle">🏠 Жильё</h2>
+      <div class="housing-filters">
+        <button class="hfbtn active" data-filter="all"     onclick="renderHousing('all')">Все</button>
+        <button class="hfbtn" data-filter="almaty"         onclick="renderHousing('almaty')">Алматы</button>
+        <button class="hfbtn" data-filter="taldyk"         onclick="renderHousing('taldyk')">Талдыкорган</button>
+        <button class="hfbtn" data-filter="cheap"          onclick="renderHousing('cheap')">До 100k ₸</button>
+      </div>
+      <div class="housing-list" id="housing-list-container"><div style="text-align:center;padding:24px;color:var(--muted)">Загрузка...</div></div>`,
+
+    mentors: `
+      <h2 class="mtitle">🎓 Менторы</h2>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Опытные наставники помогут избежать ошибок и быстрее найти работу</p>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        ${[
+          { name: 'Азамат Сейткали', role: 'HR Директор, 10 лет опыта', spec: 'Карьера, Резюме, Интервью', img: 'https://randomuser.me/api/portraits/men/75.jpg' },
+          { name: 'Гульнара Беккова', role: 'Предприниматель, Алматы',   spec: 'Бизнес, IT, Стартапы',    img: 'https://randomuser.me/api/portraits/women/56.jpg' },
+          { name: 'Ержан Назаров',   role: 'IT Engineer, 8 лет',         spec: 'Frontend, Backend, AI',   img: 'https://randomuser.me/api/portraits/men/44.jpg' }
+        ].map(m => `
+          <div class="mentor-card">
+            <img src="${m.img}" class="mentor-av" alt="${m.name}">
+            <div style="flex:1">
+              <div class="mentor-name">${m.name}</div>
+              <div class="mentor-role">${m.role}</div>
+              <div class="mentor-tags">${m.spec.split(', ').map(s => `<span class="tag">${s}</span>`).join('')}</div>
+              <a href="https://wa.me/87755088820?text=Хочу консультацию ментора ${encodeURIComponent(m.name)}" target="_blank" class="mentor-btn">💬 Связаться</a>
+            </div>
+          </div>`).join('')}
+      </div>`,
+
+    risks: `
+      <h2 class="mtitle">🛡️ Безопасность</h2>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        ${[
+          { icon: '🚫', title: 'Фиктивные вакансии',    desc: 'Никогда не платите за трудоустройство. Легальные работодатели не берут предоплату.' },
+          { icon: '📝', title: 'Договор',                 desc: 'Требуйте официальный трудовой договор. Без него вы не защищены законом.' },
+          { icon: '💳', title: 'Зарплата на карту',       desc: 'Настаивайте на официальных выплатах. "Чёрная" зарплата лишает вас социальных гарантий.' },
+          { icon: '📞', title: 'Горячая линия труда',     desc: '8 800 080 35 09 — бесплатно, круглосуточно. Министерство труда Казахстана.' }
+        ].map(r => `
+          <div style="background:var(--surface-strong);border:1.5px solid var(--border);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:flex-start">
+            <div style="font-size:28px">${r.icon}</div>
+            <div><div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">${r.title}</div><div style="font-size:12px;color:var(--muted);line-height:1.5">${r.desc}</div></div>
+          </div>`).join('')}
+      </div>`
+  };
+
+  mc.innerHTML = templates[type] || `<p style="color:var(--muted)">Раздел в разработке</p>`;
+  document.getElementById('main-modal').showModal();
+
+  if (type === 'housing') renderHousing('all');
+}
+
+/* E-gov панели */
+function showEgovPanel(id, btn) {
+  document.querySelectorAll('.egov-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.egov-btn').forEach(b => b.classList.remove('active-tab'));
+  const panel = document.getElementById('egov-panel-' + id);
+  if (panel) panel.classList.add('active');
+  if (btn)   btn.classList.add('active-tab');
+}
+
+/* =========================================================
+   ВАКАНСИИ
+========================================================= */
+const jobEmojis = { SMM: '📱', Барист: '☕', Водит: '🚗', Продав: '🛍', Sales: '💰', Курьер: '📦', Повар: '👨‍🍳', Frontend: '💻', HR: '👥' };
+function getEmoji(t) { for (const [k, v] of Object.entries(jobEmojis)) if (t.includes(k)) return v; return '💼'; }
+
+async function fetchHHJobs(searchText = '') {
+  try {
+    const url = `https://api.hh.ru/vacancies?area=40&text=${encodeURIComponent(searchText)}&per_page=15`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    return data.items.map(item => {
+      let salaryText = 'З/П не указана';
+      if (item.salary) {
+        if (item.salary.from && item.salary.to) salaryText = `${item.salary.from}–${item.salary.to} ${item.salary.currency}`;
+        else if (item.salary.from) salaryText = `от ${item.salary.from} ${item.salary.currency}`;
+      }
+      return { id: item.id, title: item.name, salary: salaryText, company: item.employer.name, city: item.area.name, tags: [item.area.name], url: item.alternate_url, type: 'vacancy' };
+    });
+  } catch(e) { return []; }
+}
+
+async function loadJobs(type = 'vacancy') {
+  let jobs = [];
+  try {
+    const dbData = await sbGet('jobs', `type=eq.${type}&order=is_hot.desc,created_at.desc`);
+    if (dbData && dbData.length > 0) jobs = dbData;
+  } catch(e) {}
+  if (type === 'vacancy') {
+    const hhJobs = await fetchHHJobs('Алматы OR Талдыкорган');
+    jobs = [...jobs, ...hhJobs];
+  }
+  return jobs;
+}
+
+function renderJobs(jobs) {
+  const c = document.getElementById('jobs-container');
+  c.innerHTML = '';
+  document.getElementById('jobs-count').textContent = jobs.length;
+  if (!jobs.length) { c.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted)">Нет вакансий</div>'; return; }
+  jobs.forEach(j => {
+    const tags = (j.tags || []).slice(0, 2).map(t => `<span class="tag">${t}</span>`).join('');
+    const actionButtons = j.url
+      ? `<a href="${j.url}" target="_blank" class="vbtn" style="background:rgba(244,162,107,.15);color:#f4a26b;border:1px solid rgba(244,162,107,.3)">📄 HH.kz</a>`
+      : `<a href="tel:${j.phone || '87755088820'}" class="vbtn vbtn-call">📞</a><a href="https://wa.me/87755088820" target="_blank" class="vbtn vbtn-wa">WA</a>`;
+    const r = document.createElement('div');
+    r.className = 'vrow';
+    r.innerHTML = `<div class="vemoji">${getEmoji(j.title)}</div><div class="vinfo"><div class="vtitle">${j.title}</div><div class="vco">${j.company} ${tags}</div></div><div class="vright"><div class="vsal">${j.salary}</div>${j.is_hot ? '<span class="hot">🔥 Hot</span>' : ''}<div class="vact">${actionButtons}</div></div>`;
+    c.appendChild(r);
+  });
+}
+
+async function switchJobTab(type) {
+  document.getElementById('tab-vacancies').className = 'tab-btn' + (type === 'vacancies'   ? ' active' : '');
+  document.getElementById('tab-intern').className    = 'tab-btn' + (type === 'internships' ? ' active' : '');
+  const jobs = await loadJobs(type === 'vacancies' ? 'vacancy' : 'internship');
+  renderJobs(jobs);
+}
+
+/* =========================================================
+   ЖИЛЬЁ
+========================================================= */
+const housingData = [
+  { id:1, title:'1-комн, Бостандык',   city:'Алматы',      price:'100 000 ₸/мес', rooms:1, img:'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=400', lat:43.255, lng:76.935, tags:['Алматы','1-комн','Метро рядом'], phone:'87755088820' },
+  { id:2, title:'2-комн, Самал-2',      city:'Алматы',      price:'160 000 ₸/мес', rooms:2, img:'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=400', lat:43.228, lng:76.918, tags:['Алматы','2-комн','Центр'],      phone:'87755088820' },
+  { id:4, title:'1-комн, центр',        city:'Талдыкорган', price:'70 000 ₸/мес',  rooms:1, img:'https://images.unsplash.com/photo-1493809842364-78817add7ffb?q=80&w=400', lat:45.013, lng:78.368, tags:['Талдыкорган','1-комн'],         phone:'87755088820' }
+];
+
+async function loadHousingData(filter) {
+  let items = [];
+  try {
+    let query = 'order=created_at.desc';
+    if (filter === 'almaty') query += '&city=eq.Алматы';
+    else if (filter === 'taldyk') query += '&city=eq.Талдыкорган';
+    else if (filter === 'cheap') query += '&price_num=lt.100000';
+    const dbData = await sbGet('housing', query);
+    if (dbData && dbData.length > 0) items = dbData;
+  } catch(e) {}
+
+  let fallback = housingData;
+  if (filter === 'almaty') fallback = fallback.filter(h => h.city === 'Алматы');
+  else if (filter === 'taldyk') fallback = fallback.filter(h => h.city === 'Талдыкорган');
+  else if (filter === 'cheap') fallback = fallback.filter(h => parseInt(h.price.replace(/\D/g,'')) < 100000);
+
+  const formattedFallback = fallback.map(h => ({
+    id: h.id, title: h.title, city: h.city, price_text: h.price,
+    price_num: parseInt(h.price.replace(/\D/g,'')) || 0,
+    rooms: h.rooms, img: h.img, lat: h.lat, lng: h.lng, tags: h.tags, phone: h.phone
+  }));
+
+  return [...items, ...formattedFallback];
+}
+
+async function renderHousing(filter = 'all') {
+  document.querySelectorAll('.hfbtn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.querySelector(`.hfbtn[data-filter="${filter}"]`);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  const c = document.getElementById('housing-list-container');
+  if (!c) return;
+  c.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted)">Загрузка...</div>';
+
+  const items = await loadHousingData(filter);
+  c.innerHTML = items.map(h => `
+    <div class="hcard">
+      <img src="${h.img || 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=400'}" class="hcard-img" alt="${h.title}">
+      <div class="hcard-body">
+        <div class="hcard-title">${h.title}</div>
+        <div class="hcard-row"><div class="hcard-price">${h.price_text}</div><div class="hcard-tags">${(h.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>
+        <div class="hcard-actions">
+          <button class="hbtn hbtn-map" onclick="showHousingOnMap(${h.lat},${h.lng},'${h.title.replace(/'/g,"\\'")}')">🗺️ Карта</button>
+          <a href="https://wa.me/${h.phone}?text=${encodeURIComponent('Квартира: ' + h.title)}" target="_blank" class="hbtn hbtn-wa">💬 WA</a>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function showHousingOnMap(lat, lng, title) {
+  document.getElementById('main-modal').close();
+  filterMap('housing');
+  map.flyTo([lat, lng], 16);
+  showToast(`🏠 Показываю: ${title}`);
+}
+
+/* =========================================================
+   ОТЗЫВЫ
+========================================================= */
+async function loadTestimonials() {
+  const items = [
+    { author_name: 'Бауыржан Мухамедов', text: 'Нашёл работу за 3 дня. Сервис реально помогает!',               avatar_url: 'https://randomuser.me/api/portraits/men/36.jpg' },
+    { author_name: 'Гульмира Серикова',   text: 'Отличный ИИ коуч, подсказал как правильно составить резюме.',   avatar_url: 'https://randomuser.me/api/portraits/women/68.jpg' },
+    { author_name: 'Сергей Ковалёв',      text: 'Нашёл квартиру через сервис за один день. Спасибо!',            avatar_url: 'https://randomuser.me/api/portraits/men/52.jpg' }
+  ];
+  document.getElementById('testimonials-container').innerHTML = items.map(t =>
+    `<div class="tcard"><img src="${t.avatar_url}" class="tav" alt=""><div><div class="ttext">"${t.text}"</div><div class="tname">— ${t.author_name}</div></div></div>`
+  ).join('');
+}
+
+/* =========================================================
+   СОИСКАТЕЛИ (режим работодателя)
+========================================================= */
+function genMockSeekers() {
+  const people = [
+    { name: 'Алихан Сейтов',    role: 'Повар',         img: 'https://randomuser.me/api/portraits/men/11.jpg'   },
+    { name: 'Мадина Бекова',    role: 'Официант',      img: 'https://randomuser.me/api/portraits/women/12.jpg' },
+    { name: 'Ержан Нурланов',   role: 'Водитель',      img: 'https://randomuser.me/api/portraits/men/22.jpg'   },
+    { name: 'Светлана Орлова',  role: 'Кассир',        img: 'https://randomuser.me/api/portraits/women/23.jpg' },
+    { name: 'Бахыт Жакупов',    role: 'Курьер',        img: 'https://randomuser.me/api/portraits/men/33.jpg'   },
+    { name: 'Дмитрий Козлов',   role: 'Строитель',     img: 'https://randomuser.me/api/portraits/men/34.jpg'   },
+    { name: 'Айгерим Асанова',  role: 'Продавец',      img: 'https://randomuser.me/api/portraits/women/45.jpg' },
+    { name: 'Нурлан Сатыбалды', role: 'Электрик',      img: 'https://randomuser.me/api/portraits/men/46.jpg'   },
+    { name: 'Карина Воронова',  role: 'Бариста',       img: 'https://randomuser.me/api/portraits/women/57.jpg' },
+    { name: 'Асет Мухамедов',   role: 'Охранник',      img: 'https://randomuser.me/api/portraits/men/58.jpg'   },
+    { name: 'Жанна Сагинтаева', role: 'Горничная',     img: 'https://randomuser.me/api/portraits/women/67.jpg' },
+    { name: 'Руслан Ахметов',   role: 'Грузчик',       img: 'https://randomuser.me/api/portraits/men/68.jpg'   },
+    { name: 'Гүлнар Досова',    role: 'Уборщица',      img: 'https://randomuser.me/api/portraits/women/77.jpg' },
+    { name: 'Иван Петренко',    role: 'Слесарь',       img: 'https://randomuser.me/api/portraits/men/78.jpg'   },
+    { name: 'Зарина Сейтова',   role: 'Оператор',      img: 'https://randomuser.me/api/portraits/women/88.jpg' },
+    { name: 'Болат Оспанов',    role: 'Сварщик',       img: 'https://randomuser.me/api/portraits/men/89.jpg'   },
+    { name: 'Наталья Крылова',  role: 'Медсестра',     img: 'https://randomuser.me/api/portraits/women/14.jpg' },
+    { name: 'Серик Байгалиев',  role: 'Механик',       img: 'https://randomuser.me/api/portraits/men/15.jpg'   },
+    { name: 'Алина Степанова',  role: 'Администратор', img: 'https://randomuser.me/api/portraits/women/35.jpg' },
+    { name: 'Даурен Ильясов',   role: 'Экспедитор',    img: 'https://randomuser.me/api/portraits/men/55.jpg'   },
+  ];
+  return people.map(p => ({
+    lat: 43.23 + (Math.random() - .5) * .05,
+    lng: 76.91 + (Math.random() - .5) * .06,
+    name: p.name, role: p.role,
+    salary: (150 + Math.floor(Math.random() * 250)) + ' 000 ₸',
+    img: p.img
+  }));
+}
+
+async function loadSeekers() {
+  const items = genMockSeekers();
+  document.getElementById('seeker-count').textContent = items.length + ' активных';
+  markersL.clearLayers();
+  items.forEach(p => {
+    const icon = L.divIcon({ className: '', html: `<div class="avatar-pin"><img src="${p.img}" alt=""></div>` });
+    L.marker([p.lat, p.lng], { icon }).bindPopup(`<div style="font-family:Nunito,sans-serif;color:#3a2d52"><strong>${p.name}</strong><br>${p.role}<br>${p.salary}</div>`).addTo(markersL);
+  });
+}
+
+/* =========================================================
+   ПРОФИЛЬ
+========================================================= */
+function editProfile() {
+  const modal = document.getElementById('profile-modal');
+  document.getElementById('prof-name').value   = userProfile.name   || '';
+  document.getElementById('prof-role').value   = userProfile.role   || 'Повар';
+  document.getElementById('prof-salary').value = userProfile.salary || '200 000 ₸';
+  document.getElementById('prof-city').value   = userProfile.city   || 'Алматы';
+  modal.showModal();
+}
+
+async function saveProfile() {
+  userProfile.name   = document.getElementById('prof-name').value.trim();
+  userProfile.role   = document.getElementById('prof-role').value.trim();
+  userProfile.salary = document.getElementById('prof-salary').value.trim();
+  userProfile.city   = document.getElementById('prof-city').value;
+
+  if (currentUser) {
+    try {
+      await sbPatch('profiles', { role: userProfile.role, salary: userProfile.salary, city: userProfile.city, name: userProfile.name }, `user_id=eq.${currentUser.id}`);
+    } catch(e) {
+      try { await sbPost('profiles', { user_id: currentUser.id, ...userProfile }); } catch {}
+    }
+  }
+  localStorage.setItem('ozge-profile', JSON.stringify(userProfile));
+  document.getElementById('profile-modal').close();
+  showToast('✅ Профиль сохранён!');
+}
+
+/* =========================================================
+   АВТОРИЗАЦИЯ
+========================================================= */
+function openAuthModal() { document.getElementById('auth-modal').showModal(); }
+
+function toggleAuth(t) {
+  const isL = t === 'login';
+  document.getElementById('btn-login').className    = 'atab' + (isL  ? ' active' : '');
+  document.getElementById('btn-register').className = 'atab' + (!isL ? ' active' : '');
+  document.getElementById('register-fields').style.display = isL ? 'none' : 'flex';
+  document.getElementById('auth-submit-text').textContent  = isL ? 'Войти в аккаунт' : 'Создать аккаунт';
+}
+
+async function handleAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pw    = document.getElementById('auth-password').value;
+  const isL   = document.getElementById('register-fields').style.display === 'none';
+  if (!email || !pw) { showToast('⚠️ Заполните все поля'); return; }
+
+  const btn = document.querySelector('#auth-modal .btn-save');
+  const orig = btn.textContent;
+  btn.textContent = 'Загрузка...';
+
+  try {
+    const r = isL ? await sbSignIn(email, pw) : await sbSignUp(email, pw);
+    if (r.error) {
+      showToast('❌ ' + r.error.message);
+    } else {
+      currentUser = r.user || (r.data && r.data.user) || r;
+      document.getElementById('auth-modal').close();
+      document.getElementById('auth-btn').textContent = '👋 Выйти';
+      document.getElementById('user-icon-btn').textContent = '😊';
+      showToast('✅ Добро пожаловать!');
+    }
+  } catch(e) {
+    showToast('❌ Ошибка сети');
+    console.error(e);
+  }
+  btn.textContent = orig;
+}
+
+/* =========================================================
+   РЕЖИМЫ
+========================================================= */
+function showSeekers(btn) {
+  document.querySelectorAll('.mfb').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  loadSeekers();
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  const cs  = document.getElementById('chat-status');
+  const fab = document.getElementById('fab-add');
+
+  if (mode === 'seeker') {
+    document.getElementById('mode-seeker').classList.add('active');
+    document.getElementById('mode-employer').classList.remove('active');
+    document.getElementById('map-filters').style.display = 'flex';
+    document.getElementById('employer-filters').classList.remove('show');
+    document.getElementById('btn-seekers').style.display = 'none';
+    if (fab) fab.style.display = 'none';
+    if (cs)  cs.textContent = t('chat_status_seeker');
+    filterMap('jobs');
+  } else {
+    document.getElementById('mode-employer').classList.add('active');
+    document.getElementById('mode-seeker').classList.remove('active');
+    document.getElementById('map-filters').style.display = 'flex';
+    document.getElementById('employer-filters').classList.add('show');
+    document.getElementById('btn-seekers').style.display = 'flex';
+    if (fab) fab.style.display = 'block';
+    if (cs)  cs.textContent = t('chat_status_employer');
+    loadSeekers();
+  }
+}
+
+/* =========================================================
+   ДОБАВЛЕНИЕ (работодатель)
+========================================================= */
+function openAddModal() {
+  if (!currentUser) {
+    showToast('⚠️ Войдите в аккаунт для добавления');
+    openAuthModal();
+    return;
+  }
+  document.getElementById('add-modal').showModal();
+}
+
+function switchAddTab(type) {
+  currentAddType = type;
+  document.getElementById('tab-add-job').classList.toggle('active',   type === 'job');
+  document.getElementById('tab-add-house').classList.toggle('active', type === 'house');
+  document.getElementById('add-company-block').style.display = type === 'job' ? 'block' : 'none';
+  document.getElementById('add-price-label').textContent     = type === 'job' ? 'Зарплата (₸)' : 'Цена (₸)';
+}
+
+async function submitAddForm() {
+  const title = document.getElementById('add-title-input').value.trim();
+  const price = document.getElementById('add-price').value.trim();
+  if (!title || !price) { showToast('⚠️ Заполните название и цену'); return; }
+
+  const btn = document.querySelector('#add-modal .btn-save');
+  btn.textContent = 'Публикация...';
+
+  try {
+    const city    = document.getElementById('add-city').value;
+    const phone   = document.getElementById('add-phone').value.trim() || '87755088820';
+    const baseLat = city === 'Талдыкорган' ? 45.015 : 43.238;
+    const baseLng = city === 'Талдыкорган' ? 78.370 : 76.910;
+
+    if (currentAddType === 'job') {
+      await sbPost('jobs', {
+        title, salary: price + ' ₸',
+        company: document.getElementById('add-company').value.trim() || 'Мой Бизнес',
+        phone, city, tags: [city], type: 'vacancy',
+        lat: baseLat + (Math.random() - .5) * .02,
+        lng: baseLng + (Math.random() - .5) * .02
+      });
+      showToast('💼 Вакансия опубликована!');
+      switchJobTab('vacancies');
+    } else {
+      await sbPost('housing', {
+        title, city, price_text: price + ' ₸/мес', price_num: parseInt(price),
+        lat: baseLat + (Math.random() - .5) * .02,
+        lng: baseLng + (Math.random() - .5) * .02,
+        phone, tags: [city]
+      });
+      showToast('🏠 Жильё опубликовано!');
+    }
+    document.getElementById('add-modal').close();
+  } catch(e) {
+    showToast('❌ Ошибка сохранения. Проверьте подключение.');
+    console.error(e);
+  }
+  btn.textContent = 'Опубликовать';
+}
+
+/* =========================================================
+   i18n ПЕРЕВОДЫ
+========================================================= */
+const I18N = {
+  ru: {
+    nav_jobs:'Работа', nav_egov:'E-gov', nav_housing:'Жильё', nav_mentors:'Менторы',
+    btn_login:'Войти', btn_logout:'Выйти',
+    mode_seeker:'Соискатель', mode_employer:'Работодатель',
+    hero_title:'Твой Город.<br>Твои Правила.',
+    hero_sub:'Найди работу и жильё в Казахстане с поддержкой AI.',
+    btn_find_job:'Найти работу', btn_housing:'🏠 Жильё',
+    map_jobs:'💼 Работа', map_traffic:'🚦 Пробки', map_comp:'🔥 Конкуренция',
+    map_services:'🏛 ЦОНы', map_leisure:'🌳 Отдых', map_housing:'🏠 Жильё', map_seekers:'👥 Кандидаты',
+    stat_title:'📊 Рынок Труда', stat_vacancies:'Вакансий в базе', stat_competition:'Конкуренция', stat_high:'Высокая',
+    stat_pct:'75% рынка занято в районе',
+    profile_title:'Твой Профиль', profile_sub:'Резюме видят работодатели', btn_update:'Обновить',
+    jobs_title:'Смарт Работа', jobs_sub:'HH.kz + Эксклюзивы',
+    tab_vacancies:'Вакансии', tab_intern:'Стажировки',
+    qa_jobs:'Работа', qa_traffic:'Пробки', qa_housing:'Жильё',
+    community_title:'Community', community_sub:'Отзывы пользователей',
+    services_title:'Сервисы', svc_risks:'Риски', svc_risks_sub:'Безопасность', svc_tg_sub:'Вакансии',
+    mentor_title:'Менторство', mentor_sub:'Найди наставника — не совершай чужих ошибок.', mentor_online:'🟢 Онлайн сейчас',
+    chat_placeholder:'Напишите вопрос...',
+    chat_status_seeker:'Онлайн · Соискатель', chat_status_employer:'Онлайн · Работодатель',
+    chat_greeting:'<strong>Привет! 👋</strong><br>Я AI карьера коуч. Найти работу, E-gov, жильё, маршруты — спрашивай!<br><br><em>Введи вопрос 👇</em>',
+    toast_located:'📍 Нашёл вас!', toast_locate_err:'❌ Не удалось определить местоположение',
+    route_finding:'🔍 Строю маршрут...', route_result:'🗺️ Маршрут до', route_walk:'мин пешком', route_car:'мин на авто', route_err:'❌ Не удалось построить маршрут.',
+    route_no_pos:'❌ Местоположение недоступно. Разрешите доступ в браузере.',
+  },
+  kz: {
+    nav_jobs:'Жұмыс', nav_egov:'E-gov', nav_housing:'Тұрғын үй', nav_mentors:'Тәлімгерлер',
+    btn_login:'Кіру', btn_logout:'Шығу',
+    mode_seeker:'Жұмыс іздеуші', mode_employer:'Жұмыс беруші',
+    hero_title:'Сенің Қалаң.<br>Сенің Ережелерің.',
+    hero_sub:'Қазақстанда AI қолдауымен жұмыс пен тұрғын үй тап.',
+    btn_find_job:'Жұмыс тап', btn_housing:'🏠 Тұрғын үй',
+    map_jobs:'💼 Жұмыс', map_traffic:'🚦 Кептеліс', map_comp:'🔥 Бәсеке',
+    map_services:'🏛 ХҚО', map_leisure:'🌳 Демалыс', map_housing:'🏠 Үй', map_seekers:'👥 Үміткерлер',
+    stat_title:'📊 Еңбек Нарығы', stat_vacancies:'Дерекқордағы бос орындар', stat_competition:'Бәсеке', stat_high:'Жоғары',
+    stat_pct:'Аудандағы нарықтың 75% алынған',
+    profile_title:'Сенің Профилің', profile_sub:'Жұмыс берушілер түйіндемені көреді', btn_update:'Жаңарту',
+    jobs_title:'Смарт Жұмыс', jobs_sub:'HH.kz + Эксклюзивтер',
+    tab_vacancies:'Вакансиялар', tab_intern:'Тағылымдама',
+    qa_jobs:'Жұмыс', qa_traffic:'Кептеліс', qa_housing:'Үй',
+    community_title:'Қауымдастық', community_sub:'Пайдаланушылар пікірі',
+    services_title:'Қызметтер', svc_risks:'Тәуекелдер', svc_risks_sub:'Қауіпсіздік', svc_tg_sub:'Вакансиялар',
+    mentor_title:'Тәлімгерлік', mentor_sub:'Тәлімгер тап — басқалардың қателіктерін жасама.', mentor_online:'🟢 Қазір онлайн',
+    chat_placeholder:'Сұрақ жазыңыз...',
+    chat_status_seeker:'Онлайн · Жұмыс іздеуші', chat_status_employer:'Онлайн · Жұмыс беруші',
+    chat_greeting:'<strong>Сәлем! 👋</strong><br>Мен AI карьера коучымын. Жұмыс, E-gov, үй, маршруттар — бәрін сұра!<br><br><em>Сұрақ жаз 👇</em>',
+    toast_located:'📍 Сізді таптым!', toast_locate_err:'❌ Орынды анықтау мүмкін болмады',
+    route_finding:'🔍 Маршрут салынуда...', route_result:'🗺️ Дейін маршрут', route_walk:'мин жаяу', route_car:'мин көлікпен', route_err:'❌ Маршрут салу мүмкін болмады.',
+    route_no_pos:'❌ Орын қолжетімсіз. Браузерде рұқсат беріңіз.',
+  },
+  en: {
+    nav_jobs:'Jobs', nav_egov:'E-gov', nav_housing:'Housing', nav_mentors:'Mentors',
+    btn_login:'Login', btn_logout:'Logout',
+    mode_seeker:'Job Seeker', mode_employer:'Employer',
+    hero_title:'Your City.<br>Your Rules.',
+    hero_sub:'Find jobs and housing in Kazakhstan with AI support.',
+    btn_find_job:'Find a Job', btn_housing:'🏠 Housing',
+    map_jobs:'💼 Jobs', map_traffic:'🚦 Traffic', map_comp:'🔥 Competition',
+    map_services:'🏛 Gov Centers', map_leisure:'🌳 Parks', map_housing:'🏠 Housing', map_seekers:'👥 Candidates',
+    stat_title:'📊 Labour Market', stat_vacancies:'Jobs in database', stat_competition:'Competition', stat_high:'High',
+    stat_pct:'75% of market occupied in area',
+    profile_title:'Your Profile', profile_sub:'Employers can see your resume', btn_update:'Update',
+    jobs_title:'Smart Jobs', jobs_sub:'HH.kz + Exclusives',
+    tab_vacancies:'Vacancies', tab_intern:'Internships',
+    qa_jobs:'Jobs', qa_traffic:'Traffic', qa_housing:'Housing',
+    community_title:'Community', community_sub:'User reviews',
+    services_title:'Services', svc_risks:'Risks', svc_risks_sub:'Safety', svc_tg_sub:'Vacancies',
+    mentor_title:'Mentorship', mentor_sub:"Find a mentor — avoid others' mistakes.", mentor_online:'🟢 Online now',
+    chat_placeholder:'Write your question...',
+    chat_status_seeker:'Online · Job Seeker', chat_status_employer:'Online · Employer',
+    chat_greeting:'<strong>Hello! 👋</strong><br>I\'m your AI career coach. Jobs, E-gov, housing, routes — just ask!<br><br><em>Type your question 👇</em>',
+    toast_located:'📍 Found you!', toast_locate_err:'❌ Could not determine location',
+    route_finding:'🔍 Building route...', route_result:'🗺️ Route to', route_walk:'min walk', route_car:'min by car', route_err:'❌ Could not build route.',
+    route_no_pos:'❌ Location unavailable. Please allow access in browser.',
+  },
+  uz: {
+    nav_jobs:'Ish', nav_egov:'E-gov', nav_housing:'Uy-joy', nav_mentors:'Mentorlar',
+    btn_login:'Kirish', btn_logout:'Chiqish',
+    mode_seeker:"Ish izlovchi", mode_employer:'Ish beruvchi',
+    hero_title:"Sizning Shahar.<br>Sizning Qoidalar.",
+    hero_sub:"Qozog'istonda AI yordamida ish va uy-joy toping.",
+    btn_find_job:'Ish topish', btn_housing:'🏠 Uy-joy',
+    map_jobs:'💼 Ish', map_traffic:'🚦 Tirbandlik', map_comp:'🔥 Raqobat',
+    map_services:'🏛 XHM', map_leisure:'🌳 Dam olish', map_housing:'🏠 Uy', map_seekers:'👥 Nomzodlar',
+    stat_title:"📊 Mehnat Bozori", stat_vacancies:"Ish o'rinlari", stat_competition:'Raqobat', stat_high:'Yuqori',
+    stat_pct:"Hududdagi bozorning 75% band",
+    profile_title:'Sizning Profil', profile_sub:"Ish beruvchilar rezyumeni ko'radi", btn_update:'Yangilash',
+    jobs_title:'Smart Ish', jobs_sub:'HH.kz + Eksklyuzivlar',
+    tab_vacancies:'Vakansiyalar', tab_intern:'Stajirovka',
+    qa_jobs:'Ish', qa_traffic:'Tirbandlik', qa_housing:'Uy',
+    community_title:'Jamiyat', community_sub:'Foydalanuvchi sharhlari',
+    services_title:'Xizmatlar', svc_risks:'Xavflar', svc_risks_sub:'Xavfsizlik', svc_tg_sub:'Vakansiyalar',
+    mentor_title:'Mentorlik', mentor_sub:"Mentor toping — boshqalarning xatolarini qilmang.", mentor_online:'🟢 Hozir onlayn',
+    chat_placeholder:'Savolingizni yozing...',
+    chat_status_seeker:"Onlayn · Ish izlovchi", chat_status_employer:'Onlayn · Ish beruvchi',
+    chat_greeting:"<strong>Salom! 👋</strong><br>Men AI martaba kouching. Ish, E-gov, uy-joy, marshrutlar — barchasi bo'yicha so'rang!<br><br><em>Savol yozing 👇</em>",
+    toast_located:"📍 Topdim!", toast_locate_err:"❌ Joylashuvni aniqlab bo'lmadi",
+    route_finding:'🔍 Marshrut qurilmoqda...', route_result:'🗺️ Gacha marshrut', route_walk:'daqiqa yayov', route_car:'daqiqa mashinada', route_err:"❌ Marshrut qurib bo'lmadi.",
+    route_no_pos:"❌ Joylashuv mavjud emas. Brauzerda ruxsat bering.",
+  }
+};
+
+let siteLang = 'ru';
+
+function t(key) { return (I18N[siteLang] && I18N[siteLang][key]) || (I18N.ru[key]) || key; }
+
+function applyI18n() {
+  // data-i18n — innerText
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val) el.textContent = val;
+  });
+  // data-i18n-html — innerHTML (for <br> in hero title)
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.getAttribute('data-i18n-html');
+    const val = t(key);
+    if (val) el.innerHTML = val;
+  });
+  // data-i18n-ph — placeholder
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const key = el.getAttribute('data-i18n-ph');
+    const val = t(key);
+    if (val) el.placeholder = val;
+  });
+  // chat greeting
+  const greetEl = document.getElementById('chat-greeting');
+  if (greetEl) greetEl.innerHTML = t('chat_greeting');
+  // chat status
+  const csEl = document.getElementById('chat-status');
+  if (csEl) csEl.textContent = t(currentMode === 'seeker' ? 'chat_status_seeker' : 'chat_status_employer');
+  // document lang
+  document.documentElement.lang = siteLang === 'kz' ? 'kk' : siteLang;
+}
+
+function setSiteLang(lang) {
+  siteLang = lang;
+  // Sync chat lang too
+  setLang(lang);
+  applyI18n();
+  // Update active button in menu
+  document.querySelectorAll('.site-lang-menu button').forEach(b => b.classList.remove('active-lang'));
+  const labels = { ru: 'RU', kz: 'KZ', en: 'EN', uz: 'UZ' };
+  document.getElementById('site-lang-label').textContent = labels[lang] || 'RU';
+  document.querySelectorAll('.site-lang-menu button').forEach(b => {
+    if (b.textContent.toLowerCase().includes(lang === 'kz' ? 'қаз' : lang === 'uz' ? "o'z" : lang === 'en' ? 'eng' : 'рус')) b.classList.add('active-lang');
+  });
+  closeSiteLangMenu();
+  localStorage.setItem('ozge-site-lang', lang);
+  showToast({ ru:'🌐 Язык: Русский', kz:'🌐 Тіл: Қазақша', en:'🌐 Language: English', uz:"🌐 Til: O'zbek" }[lang]);
+}
+
+function toggleSiteLangMenu() {
+  document.getElementById('site-lang-menu').classList.toggle('open');
+}
+function closeSiteLangMenu() {
+  document.getElementById('site-lang-menu').classList.remove('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.site-lang-wrap')) closeSiteLangMenu();
+});
+
+/* =========================================================
+   ЯЗЫК ЧАТА
+========================================================= */
+function setLang(l) {
+  currentLang = l;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('lang-' + l);
+  if (btn) btn.classList.add('active');
+}
+
+/* =========================================================
+   ИНИЦИАЛИЗАЦИЯ
+========================================================= */
+document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
+  loadTestimonials();
+  switchJobTab('vacancies');
+
+  // Enter в чате
+  document.getElementById('user-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  });
+
+  // Загружаем язык сайта
+  const savedLang = localStorage.getItem('ozge-site-lang') || 'ru';
+  siteLang = savedLang;
+  setLang(savedLang);
+  applyI18n();
+  const labels = { ru:'RU', kz:'KZ', en:'EN', uz:'UZ' };
+  document.getElementById('site-lang-label').textContent = labels[savedLang] || 'RU';
+
+  // Загружаем профиль из localStorage
+  const savedProfile = localStorage.getItem('ozge-profile');
+  if (savedProfile) {
+    try { Object.assign(userProfile, JSON.parse(savedProfile)); } catch {}
+  }
+});
+</script>
+</body>
+</html>
